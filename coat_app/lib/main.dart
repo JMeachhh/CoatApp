@@ -42,7 +42,6 @@ class _MyAppState extends State<MyApp> {
     Color titleColor = const Color.fromARGB(255, 75, 183, 255);
     Color selectionColor = titleColor;
     Color navBarUnselected = const Color.fromARGB(255, 150, 150, 150);
-    Color navBarSelected = const Color.fromARGB(255, 255, 255, 255);
 
     return Scaffold(
       appBar: AppBar(
@@ -162,11 +161,9 @@ class CustomIconBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color SelectedColorOne = const Color.fromARGB(255, 110, 178, 255);
-    Color SelectedColorTwo = const Color.fromARGB(255, 110, 173, 255);
-    Color SelectedColorThree = const Color.fromARGB(255, 111, 250, 255);
-
-    Color UnselectedColor = navBarColor;
+    Color selectedColorOne = const Color.fromARGB(255, 110, 178, 255);
+    Color selectedColorTwo = const Color.fromARGB(255, 110, 173, 255);
+    Color selectedColorThree = const Color.fromARGB(255, 111, 250, 255);
 
     double badgeLocation = buttonSize * 0.2;
     return Stack(
@@ -179,9 +176,9 @@ class CustomIconBox extends StatelessWidget {
             gradient: isSelected
                 ? LinearGradient(
                     colors: [
-                      SelectedColorOne,
-                      SelectedColorTwo,
-                      SelectedColorThree
+                      selectedColorOne,
+                      selectedColorTwo,
+                      selectedColorThree
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -253,3 +250,5 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+
+/// hello
