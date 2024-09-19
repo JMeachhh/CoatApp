@@ -37,86 +37,138 @@ class _MyAppState extends State<MyApp> {
     double iconSize = screenWidth * 0.1;
     double buttonSize = screenHeight * 0.1;
 
+    double toolbarHeight = screenHeight * 0.15;
+
     Color backgroundColor = const Color.fromARGB(255, 37, 60, 87);
+    Color appBarColor = const Color.fromARGB(255, 247, 247, 247);
     Color navBarColor = const Color.fromARGB(255, 87, 113, 143);
-    Color titleColor = const Color.fromARGB(255, 75, 183, 255);
+    Color titleColor = const Color.fromARGB(255, 19, 101, 156);
     Color selectionColor = titleColor;
     Color navBarUnselected = const Color.fromARGB(255, 150, 150, 150);
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: backgroundColor,
-        title: Text(
-          'Do I Need A Coat?',
-        ),
-        centerTitle: true,
-        foregroundColor: titleColor,
-        titleTextStyle: const TextStyle(
-            fontWeight: FontWeight.bold, fontFamily: 'roboto', fontSize: 35),
-      ),
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+          preferredSize: Size.fromHeight(toolbarHeight),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(
+                  height: toolbarHeight,
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 15,
+                        spreadRadius: 1,
+                        offset: Offset(0, 0),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              ClipPath(
+                clipper: CloudClipper(),
+                child: Container(
+                  color: appBarColor,
+                  height: toolbarHeight,
+                ),
+              ),
+              Align(
+                alignment: Alignment.center,
+                child: ClipPath(
+                  clipper: CloudClipper(),
+                  child: Container(
+                    color: Colors.transparent,
+                    child: AppBar(
+                      backgroundColor: appBarColor,
+                      title: Text(
+                        'Do I Need A Coat?',
+                      ),
+                      toolbarHeight: toolbarHeight,
+                      centerTitle: true,
+                      titleTextStyle: TextStyle(
+                          fontFamily: 'Adena', fontSize: 35, color: titleColor),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          )),
       bottomNavigationBar: Container(
         color: backgroundColor,
-        child: ClipRRect(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          child: Container(
-            color: navBarColor,
-            child: NavigationBar(
-              backgroundColor: navBarColor,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-              onDestinationSelected: (int index) {
-                setState(() {
-                  currentPageIndex = index;
-                });
-              },
-              indicatorColor: selectionColor,
-              selectedIndex: currentPageIndex,
-              destinations: <Widget>[
-                /// Home Tab
-                NavigationDestination(
-                  selectedIcon: CustomIconBox(
-                    icon: Icons.cloud,
-                    isSelected: true,
-                    iconSize: iconSize,
-                    backgroundColor: navBarUnselected,
-                    locationSelected: true,
-                    buttonSize: buttonSize,
-                    navBarColor: navBarColor,
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  spreadRadius: 5,
+                  blurRadius: 10,
+                  offset: Offset(0, 3)),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            child: Container(
+              color: navBarColor,
+              child: NavigationBar(
+                backgroundColor: navBarColor,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+                onDestinationSelected: (int index) {
+                  setState(() {
+                    currentPageIndex = index;
+                  });
+                },
+                indicatorColor: selectionColor,
+                selectedIndex: currentPageIndex,
+                destinations: <Widget>[
+                  /// Home Tab
+                  NavigationDestination(
+                    selectedIcon: CustomIconBox(
+                      icon: Icons.cloud,
+                      isSelected: true,
+                      iconSize: iconSize,
+                      backgroundColor: navBarUnselected,
+                      locationSelected: true,
+                      buttonSize: buttonSize,
+                      navBarColor: navBarColor,
+                    ),
+                    icon: CustomIconBox(
+                      icon: Icons.cloud,
+                      isSelected: false,
+                      iconSize: iconSize,
+                      backgroundColor: navBarUnselected,
+                      locationSelected: true,
+                      buttonSize: buttonSize,
+                      navBarColor: navBarColor,
+                    ),
+                    label: '',
                   ),
-                  icon: CustomIconBox(
-                    icon: Icons.cloud,
-                    isSelected: false,
-                    iconSize: iconSize,
-                    backgroundColor: navBarUnselected,
-                    locationSelected: true,
-                    buttonSize: buttonSize,
-                    navBarColor: navBarColor,
-                  ),
-                  label: '',
-                ),
 
-                /// Settings Tab
-                NavigationDestination(
-                  selectedIcon: CustomIconBox(
-                    icon: Icons.settings,
-                    isSelected: true,
-                    iconSize: iconSize,
-                    backgroundColor: navBarUnselected,
-                    locationSelected: locationSelected,
-                    buttonSize: buttonSize,
-                    navBarColor: navBarColor,
-                  ),
-                  icon: CustomIconBox(
-                    icon: Icons.settings,
-                    isSelected: false,
-                    iconSize: iconSize,
-                    backgroundColor: navBarUnselected,
-                    locationSelected: locationSelected,
-                    buttonSize: buttonSize,
-                    navBarColor: navBarColor,
-                  ),
-                  label: '',
-                )
-              ],
+                  /// Settings Tab
+                  NavigationDestination(
+                    selectedIcon: CustomIconBox(
+                      icon: Icons.settings,
+                      isSelected: true,
+                      iconSize: iconSize,
+                      backgroundColor: navBarUnselected,
+                      locationSelected: locationSelected,
+                      buttonSize: buttonSize,
+                      navBarColor: navBarColor,
+                    ),
+                    icon: CustomIconBox(
+                      icon: Icons.settings,
+                      isSelected: false,
+                      iconSize: iconSize,
+                      backgroundColor: navBarUnselected,
+                      locationSelected: locationSelected,
+                      buttonSize: buttonSize,
+                      navBarColor: navBarColor,
+                    ),
+                    label: '',
+                  )
+                ],
+              ),
             ),
           ),
         ),
@@ -138,6 +190,42 @@ class _MyAppState extends State<MyApp> {
       locationSelected = true;
     });
   }
+}
+
+class CloudClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+
+    path.moveTo(0, size.height);
+
+    path.lineTo(0, size.height * 0.8);
+
+    // first bump
+    path.quadraticBezierTo(size.width * 0.1, size.height * 0.9,
+        size.width * 0.2, size.height * 0.8);
+
+    // second bump
+    path.quadraticBezierTo(size.width * 0.3, size.height * 0.9,
+        size.width * 0.5, size.height * 0.8);
+
+    // third bump
+    path.quadraticBezierTo(size.width * 0.68, size.height * 0.9,
+        size.width * 0.75, size.height * 0.8);
+
+    // fourth bump
+    path.quadraticBezierTo(
+        size.width * 0.88, size.height * 0.9, size.width, size.height * 0.8);
+
+    path.lineTo(size.width, 0);
+
+    path.lineTo(0, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
 class CustomIconBox extends StatelessWidget {
@@ -219,11 +307,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
+    double topPadd = MediaQuery.of(context).padding.top;
     return Scaffold(
-        backgroundColor: widget.backgroundColor,
-        body: const Center(
-          child: Text('Home Screen'),
-        ));
+      backgroundColor: widget.backgroundColor,
+      body: Container(
+        margin: EdgeInsets.only(
+          top: topPadd - 1,
+        ),
+        child: Text('hello'),
+      ),
+    );
   }
 }
 
@@ -242,13 +335,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.backgroundColor,
-      body: ElevatedButton(
-        onPressed: widget.onLocationSet,
-        child: const Text('Set Location'),
-      ),
-    );
+        backgroundColor: widget.backgroundColor,
+        body: SafeArea(
+          child: ElevatedButton(
+            onPressed: widget.onLocationSet,
+            child: const Text('Set Location'),
+          ),
+        ));
   }
 }
-
-/// hello
