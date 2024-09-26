@@ -256,8 +256,8 @@ class CustomIconBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color selectedColorOne = const Color.fromARGB(255, 110, 178, 255);
-    Color selectedColorTwo = const Color.fromARGB(255, 110, 173, 255);
+    Color selectedColorOne = const Color.fromARGB(255, 21, 130, 255);
+    // Color selectedColorTwo = const Color.fromARGB(255, 110, 173, 255);
     Color selectedColorThree = const Color.fromARGB(255, 111, 250, 255);
 
     double badgeLocation = buttonSize * 0.2;
@@ -271,9 +271,9 @@ class CustomIconBox extends StatelessWidget {
             gradient: isSelected
                 ? LinearGradient(
                     colors: [
-                      selectedColorOne,
-                      selectedColorTwo,
-                      selectedColorThree
+                      selectedColorThree,
+                      // selectedColorTwo,
+                      selectedColorOne
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -326,7 +326,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isSelected;
     double topPadd = MediaQuery.of(context).padding.top;
     Color widgetColor = const Color.fromARGB(255, 226, 239, 255);
 
@@ -414,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 for (int i = 0; i < 5; i++)
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: gradientButton(buttonSize, () => onPressed(i),
                         setDay(i), isButtonSelected(i, selectedIndex), i),
                   ),
