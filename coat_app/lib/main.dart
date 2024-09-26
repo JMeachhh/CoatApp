@@ -1,6 +1,9 @@
 import 'dart:developer';
+import 'dart:ffi' as ffi;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:do_i_need_a_coat/styles/button.dart';
 
 void main() {
   runApp(const CoatApp());
@@ -37,7 +40,9 @@ class _MyAppState extends State<MyApp> {
     double iconSize = screenWidth * 0.1;
     double buttonSize = screenHeight * 0.1;
 
-    double toolbarHeight = screenHeight * 0.15;
+    double toolbarHeight = screenHeight * 0.18;
+
+    double fontSize = screenHeight * 0.05;
 
     Color backgroundColor = const Color.fromARGB(255, 37, 60, 87);
     Color appBarColor = const Color.fromARGB(255, 247, 247, 247);
@@ -61,7 +66,7 @@ class _MyAppState extends State<MyApp> {
                         color: Colors.black.withOpacity(0.3),
                         blurRadius: 15,
                         spreadRadius: 1,
-                        offset: Offset(0, 0),
+                        offset: Offset(0, -(screenHeight * 0.025)),
                       ),
                     ],
                   ),
@@ -88,7 +93,9 @@ class _MyAppState extends State<MyApp> {
                       toolbarHeight: toolbarHeight,
                       centerTitle: true,
                       titleTextStyle: TextStyle(
-                          fontFamily: 'Adena', fontSize: 35, color: titleColor),
+                          fontFamily: 'Adena',
+                          fontSize: fontSize,
+                          color: titleColor),
                     ),
                   ),
                 ),
@@ -304,19 +311,134 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+// function from stackOverflow which darkens when amount is closer to 0.
+Color darken(Color color, [double amount = 0.2]) {
+  assert(amount >= 0 && amount <= 1);
+
+  final hsl = HSLColor.fromColor(color);
+  final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+
+  return hslDark.toColor();
+}
+
 class _HomeScreenState extends State<HomeScreen> {
+  int selectedIndex = -1;
+
   @override
   Widget build(BuildContext context) {
+    bool isSelected;
     double topPadd = MediaQuery.of(context).padding.top;
+    Color widgetColor = const Color.fromARGB(255, 226, 239, 255);
+
+    Color shadowColor = darken(widget.backgroundColor);
+
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
+    double widgetSize = screenWidth * 0.8;
+    double barHeight = screenHeight * 0.09;
+
+    double buttonSize = barHeight * 0.7;
+
+    double barLocation = topPadd + screenHeight * 0.50;
+    double widgetLocation = topPadd + screenHeight * 0.07;
+
     return Scaffold(
       backgroundColor: widget.backgroundColor,
-      body: Container(
-        margin: EdgeInsets.only(
-          top: topPadd - 1,
-        ),
-        child: Text('hello'),
+      body: Stack(
+        children: [
+          Container(
+            color: widget.backgroundColor,
+          ),
+          Positioned(
+            top: widgetLocation,
+            left: (screenWidth - widgetSize) / 2,
+            child: Container(
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                        color: shadowColor,
+                        offset: Offset(0, 0),
+                        blurRadius: 15,
+                        spreadRadius: 1)
+                  ]),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: widgetSize,
+                  height: widgetSize,
+                  color: widgetColor,
+                  child: Stack(
+                    alignment: Alignment(0, 0),
+                    children: [
+                      Text('Widget'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: barLocation,
+            left: (screenWidth - widgetSize) / 2,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                      color: shadowColor,
+                      offset: Offset(0, 0),
+                      blurRadius: 15,
+                      spreadRadius: 1)
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Container(
+                  width: widgetSize,
+                  height: barHeight,
+                  color: widgetColor,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: (barLocation) + barHeight / 6.7,
+            left: ((screenWidth - widgetSize) / 2) + 10,
+            child: Row(
+              children: [
+                for (int i = 0; i < 5; i++)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: gradientButton(buttonSize, () => onPressed(i),
+                        setDay(i), isButtonSelected(i, selectedIndex), i),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  String setDay(int index) {
+    List<String> days = ['Today', 'TUE', 'WED', 'THU', 'FRI'];
+    return days[index];
+  }
+
+  bool isButtonSelected(int index, int selectedIndex) {
+    return (index == selectedIndex);
+  }
+
+  void onPressed(int index) {
+    setState(() {
+      selectedIndex = index;
+    });
   }
 }
 
@@ -335,12 +457,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: widget.backgroundColor,
-        body: SafeArea(
-          child: ElevatedButton(
-            onPressed: widget.onLocationSet,
-            child: const Text('Set Location'),
-          ),
-        ));
+      backgroundColor: widget.backgroundColor,
+      body: SafeArea(
+        child: ElevatedButton(
+          onPressed: widget.onLocationSet,
+          child: const Text('Set Location'),
+        ),
+      ),
+    );
   }
 }
