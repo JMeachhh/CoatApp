@@ -1,16 +1,17 @@
 import 'dart:developer';
 import 'dart:ffi' as ffi;
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:do_i_need_a_coat/styles/button.dart';
+import 'package:do_i_need_a_coat/screen/home.dart';
+import 'package:do_i_need_a_coat/screen/settings.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
+  await dotenv.load(fileName: '.env');
   runApp(const CoatApp());
 }
 
 class CoatApp extends StatelessWidget {
-  const CoatApp({Key? key}) : super(key: key);
+  const CoatApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +30,49 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  int currentPageIndex = 1;
+  int currentPageIndex = 0;
   bool locationSelected = false;
+  String location = '';
+
+  double latitude = 0;
+  double longitude = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Instead of loading images directly in initState, delay the load to after the widget is mounted
+    Future.delayed(Duration.zero, () {
+      loadImage('assets/wardrobe_empty.jpg', context);
+      loadImage('assets/football.png', context);
+      loadImage('assets/blue_shoe_box.png', context);
+      loadImage('assets/plant.png', context);
+      loadImage('assets/monday_clock_display.png', context);
+      loadImage('assets/tuesday_clock_display.png', context);
+      loadImage('assets/wednesday_clock_display.png', context);
+      loadImage('assets/thursday_clock_display.png', context);
+      loadImage('assets/friday_clock_display.png', context);
+      loadImage('assets/saturday_clock_display.png', context);
+      loadImage('assets/sunday_clock_display.png', context);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Cancel any ongoing tasks if needed
+    super.dispose();
+  }
+
+  Future<void> loadImage(String imageUrl, BuildContext context) async {
+    try {
+      // Only load if the widget is still mounted
+      if (!mounted) return;
+
+      await precacheImage(AssetImage(imageUrl), context);
+      print('Image loaded and cached successfully!');
+    } catch (e) {
+      print('Failed to load and cache the image: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +201,8 @@ class _MyAppState extends State<MyApp> {
                       isSelected: true,
                       iconSize: iconSize,
                       backgroundColor: navBarUnselected,
-                      locationSelected: locationSelected,
+                      locationSelected:
+                          locationSelected, // Ensure this value is passed
                       buttonSize: buttonSize,
                       navBarColor: navBarColor,
                     ),
@@ -168,7 +211,8 @@ class _MyAppState extends State<MyApp> {
                       isSelected: false,
                       iconSize: iconSize,
                       backgroundColor: navBarUnselected,
-                      locationSelected: locationSelected,
+                      locationSelected:
+                          locationSelected, // Ensure this value is passed
                       buttonSize: buttonSize,
                       navBarColor: navBarColor,
                     ),
@@ -183,13 +227,24 @@ class _MyAppState extends State<MyApp> {
       body: <Widget>[
         HomeScreen(
           backgroundColor: backgroundColor,
+          latitude: latitude,
+          longitude: longitude,
         ),
         SettingsScreen(
+          locationSelected: locationSelected,
           onLocationSet: changeLocationSelected,
           backgroundColor: backgroundColor,
+          updateLocation: updateLocation,
         )
       ][currentPageIndex],
     );
+  }
+
+  void updateLocation(String location, double latitude, double longitude) {
+    setState(() {
+      this.latitude = latitude;
+      this.longitude = longitude;
+    });
   }
 
   void changeLocationSelected() {
@@ -240,24 +295,24 @@ class CustomIconBox extends StatelessWidget {
   final bool isSelected;
   final double iconSize;
   final Color backgroundColor;
-  final bool locationSelected;
+  final bool locationSelected; // Add this line
   final double buttonSize;
   final Color navBarColor;
 
-  const CustomIconBox(
-      {super.key,
-      required this.icon,
-      required this.isSelected,
-      required this.iconSize,
-      required this.backgroundColor,
-      required this.locationSelected,
-      required this.buttonSize,
-      required this.navBarColor});
+  const CustomIconBox({
+    super.key,
+    required this.icon,
+    required this.isSelected,
+    required this.iconSize,
+    required this.backgroundColor,
+    required this.locationSelected, // Include this parameter
+    required this.buttonSize,
+    required this.navBarColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     Color selectedColorOne = const Color.fromARGB(255, 21, 130, 255);
-    // Color selectedColorTwo = const Color.fromARGB(255, 110, 173, 255);
     Color selectedColorThree = const Color.fromARGB(255, 111, 250, 255);
 
     double badgeLocation = buttonSize * 0.2;
@@ -270,11 +325,7 @@ class CustomIconBox extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: isSelected
                 ? LinearGradient(
-                    colors: [
-                      selectedColorThree,
-                      // selectedColorTwo,
-                      selectedColorOne
-                    ],
+                    colors: [selectedColorThree, selectedColorOne],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
@@ -289,7 +340,7 @@ class CustomIconBox extends StatelessWidget {
             color: isSelected ? Colors.white : Colors.grey,
           ),
         ),
-        if (!locationSelected)
+        if (!locationSelected) // Check the value of locationSelected
           Positioned(
             right: badgeLocation,
             top: badgeLocation,
@@ -299,170 +350,6 @@ class CustomIconBox extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  final Color backgroundColor;
-  const HomeScreen({super.key, required this.backgroundColor});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-// function from stackOverflow which darkens when amount is closer to 0.
-Color darken(Color color, [double amount = 0.2]) {
-  assert(amount >= 0 && amount <= 1);
-
-  final hsl = HSLColor.fromColor(color);
-  final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
-
-  return hslDark.toColor();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int selectedIndex = -1;
-
-  @override
-  Widget build(BuildContext context) {
-    double topPadd = MediaQuery.of(context).padding.top;
-    Color widgetColor = const Color.fromARGB(255, 226, 239, 255);
-
-    Color shadowColor = darken(widget.backgroundColor);
-
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
-    double widgetSize = screenWidth * 0.8;
-    double barHeight = screenHeight * 0.09;
-
-    double buttonSize = barHeight * 0.7;
-
-    double barLocation = topPadd + screenHeight * 0.50;
-    double widgetLocation = topPadd + screenHeight * 0.07;
-
-    return Scaffold(
-      backgroundColor: widget.backgroundColor,
-      body: Stack(
-        children: [
-          Container(
-            color: widget.backgroundColor,
-          ),
-          Positioned(
-            top: widgetLocation,
-            left: (screenWidth - widgetSize) / 2,
-            child: Container(
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                        color: shadowColor,
-                        offset: Offset(0, 0),
-                        blurRadius: 15,
-                        spreadRadius: 1)
-                  ]),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  width: widgetSize,
-                  height: widgetSize,
-                  color: widgetColor,
-                  child: Stack(
-                    alignment: Alignment(0, 0),
-                    children: [
-                      Text('Widget'),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: barLocation,
-            left: (screenWidth - widgetSize) / 2,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                      color: shadowColor,
-                      offset: Offset(0, 0),
-                      blurRadius: 15,
-                      spreadRadius: 1)
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(15),
-                child: Container(
-                  width: widgetSize,
-                  height: barHeight,
-                  color: widgetColor,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: (barLocation) + barHeight / 6.7,
-            left: ((screenWidth - widgetSize) / 2) + 10,
-            child: Row(
-              children: [
-                for (int i = 0; i < 5; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: gradientButton(buttonSize, () => onPressed(i),
-                        setDay(i), isButtonSelected(i, selectedIndex), i),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String setDay(int index) {
-    List<String> days = ['Today', 'TUE', 'WED', 'THU', 'FRI'];
-    return days[index];
-  }
-
-  bool isButtonSelected(int index, int selectedIndex) {
-    return (index == selectedIndex);
-  }
-
-  void onPressed(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-  }
-}
-
-class SettingsScreen extends StatefulWidget {
-  final VoidCallback onLocationSet;
-  final Color backgroundColor;
-
-  const SettingsScreen(
-      {super.key, required this.onLocationSet, required this.backgroundColor});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: widget.backgroundColor,
-      body: SafeArea(
-        child: ElevatedButton(
-          onPressed: widget.onLocationSet,
-          child: const Text('Set Location'),
-        ),
-      ),
     );
   }
 }
