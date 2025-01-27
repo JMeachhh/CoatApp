@@ -32,8 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Check if location has already been selected
     if (widget.locationSelected) {
       setState(() {
-        location =
-            widget.locationSelected ? 'Latitude: $lat , Longitude: $long' : '';
+        location = 'Latitude: $lat , Longitude: $long';
       });
     }
   }

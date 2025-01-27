@@ -70,27 +70,16 @@ Color darken(Color color, [double amount = 0.2]) {
 
 class _HomeScreenState extends State<HomeScreen> {
   final apiKey = dotenv.env['OPENWEATHER_API_KEY'] ?? '';
-  WeatherFactory _wf = WeatherFactory('', language: Language.ENGLISH);
-  bool _isLoading = true;
 
   int selectedIndex = 0;
-
-  AppWeather? _weather;
 
   List<AppWeather> _forecast = [];
 
   @override
   void initState() {
     super.initState();
-
-    // Get the API key from environment variables
-
-    _wf = WeatherFactory(apiKey, language: Language.ENGLISH);
-
     // Use the latitude and longitude passed from SettingsScreen
     _fetchFiveDayForecast(widget.latitude, widget.longitude);
-
-    print(apiKey);
   }
 
   void _fetchFiveDayForecast(double latitude, double longitude) async {
@@ -110,8 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 .map<AppWeather>((item) => AppWeather.fromJson(item))
                 .where((weather) => weather.date.hour == 12)
                 .toList();
-
-            _isLoading = false;
           });
         }
       } else {
@@ -189,16 +176,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Stack(
                     alignment: Alignment(0, 0),
                     children: [
-                      Image(
+                      const Image(
                         image: AssetImage('assets/wardrobe_with_clock.jpg'),
                       ),
-                      Image(
+                      const Image(
                         image: AssetImage('assets/plant.png'),
                       ),
-                      Image(
+                      const Image(
                         image: AssetImage('assets/football.png'),
                       ),
-                      Image(
+                      const Image(
                         image: AssetImage('assets/blue_shoe_box.png'),
                       ),
                       Image(
@@ -273,28 +260,18 @@ class _HomeScreenState extends State<HomeScreen> {
       if (description != null &&
           (description.contains('rain') || description.contains('drizzle'))) {
         print("It's raining. You need a coat.");
-        // return 'assets/green_coat.png';
-        return 'assets/football.png';
+        return 'assets/green_coat_rain.png';
       }
       print("No coat needed. Temp is: $feelsLikeCelsius°C");
-      // return 'assets/red_coat.png';
-      return 'assets/football.png';
+      return 'assets/red_coat.png';
     } else {
       print("Coat needed. Temp is: $feelsLikeCelsius°C");
-      // return 'assets/green_coat.png';
-      return 'assets/football.png';
+      return 'assets/green_coat_cold.png';
     }
   }
 
   String setDay(int index) {
-    DateTime now;
-
-    if (_weather != null && _weather!.date != null) {
-      now = _weather!.date!;
-    } else {
-      now = DateTime.now();
-    }
-    DateTime day = now.add(Duration(days: index));
+    final day = DateTime.now().add(Duration(days: index));
     return DateFormat('EEEE').format(day).substring(0, 3).toUpperCase();
   }
 
@@ -326,11 +303,5 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'assets/sunday_clock_display.png';
     }
     return '';
-  }
-
-  void fetchWeather() {
-    const url = 'http://api.weatherapi.com/current.json';
-    final uri = Uri.parse(url);
-    http.get(uri);
   }
 }
