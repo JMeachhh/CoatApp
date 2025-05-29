@@ -28,10 +28,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  google_mobile_ads: ^5.0.0
   flutter:
     sdk: flutter
   flutter_dotenv: ^5.0.2
-
   geolocator: ^9.0.0
 
 

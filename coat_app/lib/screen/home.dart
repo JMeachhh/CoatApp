@@ -1,43 +1,28 @@
 import 'dart:convert';
-import 'dart:ffi';
 
-import 'package:do_i_need_a_coat/consts.dart';
 import 'package:flutter/material.dart';
-import 'package:do_i_need_a_coat/screen/settings.dart';
 import 'package:do_i_need_a_coat/styles/button.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:weather/weather.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AppWeather {
   final DateTime date;
-  final double? dayTemp;
-  final double? minTemp;
-  final double? maxTemp;
   final double? feelsLikeTemp;
   final String? description;
-  final String? icon;
 
   AppWeather({
     required this.date,
-    this.dayTemp,
-    this.minTemp,
-    this.maxTemp,
     this.feelsLikeTemp,
     this.description,
-    this.icon,
   });
 
   factory AppWeather.fromJson(Map<String, dynamic> json) {
     return AppWeather(
       date: DateTime.parse(json['dt_txt']),
-      dayTemp: (json['main']['temp'] as num).toDouble(),
-      minTemp: (json['main']['temp_min'] as num).toDouble(),
-      maxTemp: (json['main']['temp_max'] as num).toDouble(),
       feelsLikeTemp: (json['main']['feels_like'] as num).toDouble(),
       description: json['weather'][0]['description'],
-      icon: json['weather'][0]['icon'],
     );
   }
 }
@@ -58,28 +43,54 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-// function from stackOverflow which darkens when amount is closer to 0.
 Color darken(Color color, [double amount = 0.2]) {
-  assert(amount >= 0 && amount <= 1);
-
   final hsl = HSLColor.fromColor(color);
   final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
-
   return hslDark.toColor();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   final apiKey = dotenv.env['OPENWEATHER_API_KEY'] ?? '';
-
   int selectedIndex = 0;
-
   List<AppWeather> _forecast = [];
+  double _coatThreshold = 12.0;
+
+  late BannerAd _bannerAd;
+  bool _isBannerAdReady = false;
 
   @override
   void initState() {
     super.initState();
-    // Use the latitude and longitude passed from SettingsScreen
+
     _fetchFiveDayForecast(widget.latitude, widget.longitude);
+
+    // Initialize Banner Ad
+    _bannerAd = BannerAd(
+      adUnitId: dotenv.env['BANNER_AD_UNIT_ID'] ?? '<YOUR_BANNER_AD_UNIT_ID>',
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          if (mounted) {
+            setState(() {
+              _isBannerAdReady = true;
+            });
+          }
+        },
+        onAdFailedToLoad: (ad, err) {
+          debugPrint('Failed to load a banner ad: ${err.message}');
+          ad.dispose();
+        },
+      ),
+    );
+
+    _bannerAd.load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd.dispose();
+    super.dispose();
   }
 
   void _fetchFiveDayForecast(double latitude, double longitude) async {
@@ -93,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
         final forecastList = data['list'] as List;
 
         if (mounted) {
-          // Ensure widget is still mounted
           setState(() {
             _forecast = forecastList
                 .map<AppWeather>((item) => AppWeather.fromJson(item))
@@ -103,70 +113,42 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       } else {
         _showError(
-            'Failed to load forecast. Status code: ${response.statusCode}, ${response.body}');
+            'Failed to load forecast. Status code: ${response.statusCode}');
       }
     } catch (e) {
-      if (mounted) {
-        // Ensure widget is still mounted
-        _showError('Error fetching forecast: $e');
-      }
+      if (mounted) _showError('Error fetching forecast: $e');
     }
   }
 
   void _showError(String message) {
-    print(message);
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void updateLocation(String location, double latitude, double longitude) {
-    setState(() {
-      widget.latitude = latitude; // Update latitude
-      widget.longitude = longitude; // Update longitude
-    });
-    _fetchFiveDayForecast(
-        latitude, longitude); // Fetch weather for new location
-  }
-
   @override
   Widget build(BuildContext context) {
-    double topPadd = MediaQuery.of(context).padding.top;
-    Color widgetColor = const Color.fromARGB(255, 226, 239, 255);
-
-    Color shadowColor = darken(widget.backgroundColor);
-
+    double topPadding = MediaQuery.of(context).padding.top;
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
     double widgetSize = screenWidth * 0.8;
     double barHeight = screenHeight * 0.09;
+    double barLocation = topPadding + screenHeight * 0.50;
+    double widgetLocation = topPadding + screenHeight * 0.07;
 
+    Color widgetColor = const Color.fromARGB(255, 226, 239, 255);
+    Color shadowColor = darken(widget.backgroundColor);
     double buttonSize = barHeight * 0.7;
-
-    double barLocation = topPadd + screenHeight * 0.50;
-    double widgetLocation = topPadd + screenHeight * 0.07;
 
     return Scaffold(
       backgroundColor: widget.backgroundColor,
       body: Stack(
         children: [
-          Container(
-            color: widget.backgroundColor,
-          ),
           Positioned(
             top: widgetLocation,
             left: (screenWidth - widgetSize) / 2,
             child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                      color: shadowColor,
-                      offset: Offset(0, 0),
-                      blurRadius: 15,
-                      spreadRadius: 1)
-                ],
-              ),
+              decoration: _boxDecoration(shadowColor),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
@@ -174,26 +156,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: widgetSize,
                   color: widgetColor,
                   child: Stack(
-                    alignment: Alignment(0, 0),
+                    alignment: Alignment.center,
                     children: [
                       const Image(
-                        image: AssetImage('assets/wardrobe_with_clock.jpg'),
-                      ),
+                          image: AssetImage('assets/wardrobe_with_clock.jpg')),
+                      const Image(image: AssetImage('assets/plant.png')),
+                      const Image(image: AssetImage('assets/football.png')),
                       const Image(
-                        image: AssetImage('assets/plant.png'),
-                      ),
-                      const Image(
-                        image: AssetImage('assets/football.png'),
-                      ),
-                      const Image(
-                        image: AssetImage('assets/blue_shoe_box.png'),
-                      ),
-                      Image(
-                        image: AssetImage(dayDisplay(selectedIndex)),
-                      ),
-                      Image(
-                        image: AssetImage(coatDisplay(selectedIndex)),
-                      ),
+                          image: AssetImage('assets/blue_shoe_box.png')),
+                      Image(image: AssetImage(dayDisplay(selectedIndex))),
+                      Image(image: AssetImage(coatDisplay(selectedIndex))),
                     ],
                   ),
                 ),
@@ -204,89 +176,124 @@ class _HomeScreenState extends State<HomeScreen> {
             top: barLocation,
             left: (screenWidth - widgetSize) / 2,
             child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                      color: shadowColor,
-                      offset: Offset(0, 0),
-                      blurRadius: 15,
-                      spreadRadius: 1)
-                ],
-              ),
+              decoration: _boxDecoration(shadowColor),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: Container(
                   width: widgetSize,
                   height: barHeight,
                   color: widgetColor,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [],
-                  ),
                 ),
               ),
             ),
           ),
           Positioned(
-            top: (barLocation) + barHeight / 6.7,
+            top: barLocation + barHeight / 6.7,
             left: ((screenWidth - widgetSize) / 2) + 10,
             child: Row(
-              children: [
-                for (int i = 0; i < 5; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: gradientButton(buttonSize, () => onPressed(i),
-                        setDay(i), isButtonSelected(i, selectedIndex), i),
+              children: List.generate(
+                5,
+                (i) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: gradientButton(
+                    buttonSize,
+                    () => setState(() => selectedIndex = i),
+                    setDay(i),
+                    i == selectedIndex,
+                    i,
                   ),
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            bottom: screenHeight - screenHeight / 1.1,
+            left: (screenWidth - _bannerAd.size.width.toDouble()) / 2,
+            width: widgetSize,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text(
+                    'Too Warm For A Coat: ${_coatThreshold.toStringAsFixed(1)}°C',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Slider(
+                  value: _coatThreshold,
+                  min: -5,
+                  max: 25,
+                  divisions: 60,
+                  label: '${_coatThreshold.toStringAsFixed(1)}°C',
+                  activeColor: Colors.blueAccent,
+                  inactiveColor: Colors.blueGrey[200],
+                  onChanged: (value) {
+                    setState(() {
+                      _coatThreshold = value;
+                    });
+                  },
+                ),
               ],
             ),
           ),
+
+          // Banner Ad positioned at the bottom center
+          if (_isBannerAdReady)
+            Positioned(
+              bottom: 0,
+              left: (screenWidth - _bannerAd.size.width.toDouble()) / 2,
+              width: _bannerAd.size.width.toDouble(),
+              height: _bannerAd.size.height.toDouble(),
+              child: AdWidget(ad: _bannerAd),
+            ),
         ],
       ),
     );
   }
 
-  String coatDisplay(int selectedIndex) {
-    if (_forecast.isEmpty || selectedIndex >= _forecast.length) {
+  BoxDecoration _boxDecoration(Color shadowColor) => BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            offset: Offset(0, 0),
+            blurRadius: 15,
+            spreadRadius: 1,
+          )
+        ],
+      );
+
+  String coatDisplay(int index) {
+    if (_forecast.isEmpty || index >= _forecast.length) {
       return 'assets/football.png';
     }
+    final forecast = _forecast[index];
+    final temp = forecast.feelsLikeTemp;
+    final desc = forecast.description?.toLowerCase() ?? '';
 
-    final AppWeather selectedDay = _forecast[selectedIndex];
-    final double? feelsLikeCelsius = selectedDay.feelsLikeTemp;
-    final String? description = selectedDay.description?.toLowerCase();
+    print(temp);
 
-    if (feelsLikeCelsius == null || feelsLikeCelsius >= 12) {
-      if (description != null &&
-          (description.contains('rain') || description.contains('drizzle'))) {
-        print("It's raining. You need a coat.");
-        return 'assets/green_coat_rain.png';
-      }
-      print("No coat needed. Temp is: $feelsLikeCelsius°C");
-      return 'assets/red_coat.png';
+    if (temp == null || temp >= _coatThreshold) {
+      return desc.contains('rain') || desc.contains('drizzle')
+          ? 'assets/green_coat_rain.png'
+          : 'assets/red_coat.png';
     } else {
-      print("Coat needed. Temp is: $feelsLikeCelsius°C");
       return 'assets/green_coat_cold.png';
     }
   }
 
-  String setDay(int index) {
-    final day = DateTime.now().add(Duration(days: index));
-    return DateFormat('EEEE').format(day).substring(0, 3).toUpperCase();
-  }
+  String setDay(int index) => DateFormat('EEEE')
+      .format(DateTime.now().add(Duration(days: index)))
+      .substring(0, 3)
+      .toUpperCase();
 
-  bool isButtonSelected(int index, int selectedIndex) {
-    return (index == selectedIndex);
-  }
-
-  void onPressed(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-  }
-
-  String dayDisplay(int selecteIndex) {
-    switch (setDay(selecteIndex)) {
+  String dayDisplay(int index) {
+    switch (setDay(index)) {
       case 'MON':
         return 'assets/monday_clock_display.png';
       case 'TUE':
@@ -301,7 +308,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'assets/saturday_clock_display.png';
       case 'SUN':
         return 'assets/sunday_clock_display.png';
+      default:
+        return '';
     }
-    return '';
   }
 }

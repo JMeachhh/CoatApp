@@ -1,25 +1,17 @@
-import 'dart:developer';
-import 'dart:ffi' as ffi;
 import 'package:flutter/material.dart';
 import 'package:do_i_need_a_coat/screen/home.dart';
-import 'package:do_i_need_a_coat/screen/settings.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:geolocator/geolocator.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
-  runApp(const CoatApp());
-}
 
-class CoatApp extends StatelessWidget {
-  const CoatApp({super.key});
+  // Initialize Google Mobile Ads SDK
+  MobileAds.instance.initialize();
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(useMaterial3: true),
-      home: const MyApp(),
-    );
-  }
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
@@ -30,9 +22,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  int currentPageIndex = 0;
-  bool locationSelected = false;
-  String location = '';
+  bool _didPreload = false;
+  bool _isReady = false;
 
   double latitude = 0;
   double longitude = 0;
@@ -40,62 +31,89 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Instead of loading images directly in initState, delay the load to after the widget is mounted
-    Future.delayed(Duration.zero, () {
-      loadImage('assets/wardrobe_empty.jpg', context);
-      loadImage('assets/football.png', context);
-      loadImage('assets/blue_shoe_box.png', context);
-      loadImage('assets/plant.png', context);
-      loadImage('assets/monday_clock_display.png', context);
-      loadImage('assets/tuesday_clock_display.png', context);
-      loadImage('assets/wednesday_clock_display.png', context);
-      loadImage('assets/thursday_clock_display.png', context);
-      loadImage('assets/friday_clock_display.png', context);
-      loadImage('assets/saturday_clock_display.png', context);
-      loadImage('assets/sunday_clock_display.png', context);
+    _getInitialLocation();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didPreload) {
+      _preloadAssets(context).then((_) {
+        setState(() {
+          _isReady = true;
+        });
+      });
+      _didPreload = true;
+    }
+  }
+
+  Future<void> _preloadAssets(BuildContext context) async {
+    final imageAssets = [
+      'assets/wardrobe_empty.jpg',
+      'assets/football.png',
+      'assets/blue_shoe_box.png',
+      'assets/plant.png',
+      'assets/monday_clock_display.png',
+      'assets/tuesday_clock_display.png',
+      'assets/wednesday_clock_display.png',
+      'assets/thursday_clock_display.png',
+      'assets/friday_clock_display.png',
+      'assets/saturday_clock_display.png',
+      'assets/sunday_clock_display.png',
+      'assets/green_coat_rain.png',
+      'assets/red_coat.png',
+      'assets/green_coat_cold.png',
+      'assets/wardrobe_with_clock.jpg',
+    ];
+
+    for (var asset in imageAssets) {
+      await precacheImage(AssetImage(asset), context);
+    }
+  }
+
+  Future<void> _getInitialLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        latitude = position.latitude;
+        longitude = position.longitude;
+      });
+
+      _listenToLocationUpdates();
+    } catch (e) {
+      print('Error getting location: $e');
+    }
+  }
+
+  void _listenToLocationUpdates() {
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 100,
+    );
+
+    Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position pos) {
+      setState(() {
+        latitude = pos.latitude;
+        longitude = pos.longitude;
+      });
     });
   }
 
   @override
-  void dispose() {
-    // Cancel any ongoing tasks if needed
-    super.dispose();
-  }
-
-  Future<void> loadImage(String imageUrl, BuildContext context) async {
-    try {
-      // Only load if the widget is still mounted
-      if (!mounted) return;
-
-      await precacheImage(AssetImage(imageUrl), context);
-      print('Image loaded and cached successfully!');
-    } catch (e) {
-      print('Failed to load and cache the image: $e');
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
-
-    double iconSize = screenWidth * 0.1;
-    double buttonSize = screenHeight * 0.1;
-
-    double toolbarHeight = screenHeight * 0.18;
-
     double fontSize = screenHeight * 0.05;
 
     Color backgroundColor = const Color.fromARGB(255, 37, 60, 87);
     Color appBarColor = const Color.fromARGB(255, 247, 247, 247);
-    Color navBarColor = const Color.fromARGB(255, 87, 113, 143);
     Color titleColor = const Color.fromARGB(255, 19, 101, 156);
-    Color selectionColor = titleColor;
-    Color navBarUnselected = const Color.fromARGB(255, 150, 150, 150);
+    double toolbarHeight = screenHeight * 0.18;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
+    return MaterialApp(
+      theme: ThemeData(useMaterial3: true),
+      home: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: PreferredSize(
           preferredSize: Size.fromHeight(toolbarHeight),
           child: Stack(
             children: [
@@ -131,126 +149,31 @@ class _MyAppState extends State<MyApp> {
                       backgroundColor: appBarColor,
                       title: Text(
                         'Do I Need A Coat?',
+                        style: TextStyle(
+                          fontFamily: 'Adena',
+                          fontSize: fontSize,
+                          color: titleColor,
+                        ),
                       ),
                       toolbarHeight: toolbarHeight,
                       centerTitle: true,
-                      titleTextStyle: TextStyle(
-                          fontFamily: 'Adena',
-                          fontSize: fontSize,
-                          color: titleColor),
+                      elevation: 0,
                     ),
                   ),
                 ),
-              )
-            ],
-          )),
-      bottomNavigationBar: Container(
-        color: backgroundColor,
-        child: Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  spreadRadius: 5,
-                  blurRadius: 10,
-                  offset: Offset(0, 3)),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            child: Container(
-              color: navBarColor,
-              child: NavigationBar(
-                backgroundColor: navBarColor,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-                onDestinationSelected: (int index) {
-                  setState(() {
-                    currentPageIndex = index;
-                  });
-                },
-                indicatorColor: selectionColor,
-                selectedIndex: currentPageIndex,
-                destinations: <Widget>[
-                  /// Home Tab
-                  NavigationDestination(
-                    selectedIcon: CustomIconBox(
-                      icon: Icons.cloud,
-                      isSelected: true,
-                      iconSize: iconSize,
-                      backgroundColor: navBarUnselected,
-                      locationSelected: true,
-                      buttonSize: buttonSize,
-                      navBarColor: navBarColor,
-                    ),
-                    icon: CustomIconBox(
-                      icon: Icons.cloud,
-                      isSelected: false,
-                      iconSize: iconSize,
-                      backgroundColor: navBarUnselected,
-                      locationSelected: true,
-                      buttonSize: buttonSize,
-                      navBarColor: navBarColor,
-                    ),
-                    label: '',
-                  ),
-
-                  /// Settings Tab
-                  NavigationDestination(
-                    selectedIcon: CustomIconBox(
-                      icon: Icons.settings,
-                      isSelected: true,
-                      iconSize: iconSize,
-                      backgroundColor: navBarUnselected,
-                      locationSelected:
-                          locationSelected, // Ensure this value is passed
-                      buttonSize: buttonSize,
-                      navBarColor: navBarColor,
-                    ),
-                    icon: CustomIconBox(
-                      icon: Icons.settings,
-                      isSelected: false,
-                      iconSize: iconSize,
-                      backgroundColor: navBarUnselected,
-                      locationSelected:
-                          locationSelected, // Ensure this value is passed
-                      buttonSize: buttonSize,
-                      navBarColor: navBarColor,
-                    ),
-                    label: '',
-                  )
-                ],
               ),
-            ),
+            ],
           ),
         ),
+        body: (_isReady && latitude != 0 && longitude != 0)
+            ? HomeScreen(
+                backgroundColor: backgroundColor,
+                latitude: latitude,
+                longitude: longitude,
+              )
+            : const Center(child: CircularProgressIndicator()),
       ),
-      body: <Widget>[
-        HomeScreen(
-          backgroundColor: backgroundColor,
-          latitude: latitude,
-          longitude: longitude,
-        ),
-        SettingsScreen(
-          locationSelected: locationSelected,
-          onLocationSet: changeLocationSelected,
-          backgroundColor: backgroundColor,
-          updateLocation: updateLocation,
-        )
-      ][currentPageIndex],
     );
-  }
-
-  void updateLocation(String location, double latitude, double longitude) {
-    setState(() {
-      this.latitude = latitude;
-      this.longitude = longitude;
-    });
-  }
-
-  void changeLocationSelected() {
-    setState(() {
-      locationSelected = true;
-    });
   }
 }
 
@@ -258,29 +181,17 @@ class CloudClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     Path path = Path();
-
     path.moveTo(0, size.height);
-
     path.lineTo(0, size.height * 0.8);
-
-    // first bump
     path.quadraticBezierTo(size.width * 0.1, size.height * 0.9,
         size.width * 0.2, size.height * 0.8);
-
-    // second bump
     path.quadraticBezierTo(size.width * 0.3, size.height * 0.9,
         size.width * 0.5, size.height * 0.8);
-
-    // third bump
     path.quadraticBezierTo(size.width * 0.68, size.height * 0.9,
         size.width * 0.75, size.height * 0.8);
-
-    // fourth bump
     path.quadraticBezierTo(
         size.width * 0.88, size.height * 0.9, size.width, size.height * 0.8);
-
     path.lineTo(size.width, 0);
-
     path.lineTo(0, 0);
     path.close();
     return path;
@@ -288,68 +199,4 @@ class CloudClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
-}
-
-class CustomIconBox extends StatelessWidget {
-  final IconData icon;
-  final bool isSelected;
-  final double iconSize;
-  final Color backgroundColor;
-  final bool locationSelected; // Add this line
-  final double buttonSize;
-  final Color navBarColor;
-
-  const CustomIconBox({
-    super.key,
-    required this.icon,
-    required this.isSelected,
-    required this.iconSize,
-    required this.backgroundColor,
-    required this.locationSelected, // Include this parameter
-    required this.buttonSize,
-    required this.navBarColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Color selectedColorOne = const Color.fromARGB(255, 21, 130, 255);
-    Color selectedColorThree = const Color.fromARGB(255, 111, 250, 255);
-
-    double badgeLocation = buttonSize * 0.2;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: iconSize * 1.6,
-          height: iconSize * 1.5,
-          decoration: BoxDecoration(
-            gradient: isSelected
-                ? LinearGradient(
-                    colors: [selectedColorThree, selectedColorOne],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: isSelected ? null : navBarColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            icon,
-            size: iconSize,
-            color: isSelected ? Colors.white : Colors.grey,
-          ),
-        ),
-        if (!locationSelected) // Check the value of locationSelected
-          Positioned(
-            right: badgeLocation,
-            top: badgeLocation,
-            child: CircleAvatar(
-              radius: iconSize * 0.2,
-              backgroundColor: const Color.fromARGB(255, 255, 48, 48),
-            ),
-          ),
-      ],
-    );
-  }
 }
